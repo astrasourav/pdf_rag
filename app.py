@@ -427,4 +427,3 @@ with tab2:
             </div>""", unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.info("💡 Screenshot these scores and add them to your README — very few candidates do this in interviews!")
