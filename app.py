@@ -194,7 +194,7 @@ with st.sidebar:
     chunk_size    = st.slider("Chunk Size (tokens)", 128, 1024, 512, 64)
     chunk_overlap = st.slider("Chunk Overlap", 0, 256, 64, 16)
     embedding_model = st.selectbox("Embedding Model", [
-        "sentence-transformers/all-MiniLM-L6-v2", "BAAI/bge-small-en"
+        "sentence-transformers/all-MiniLM-L6-v2"
     ])
     retrieval_mode = st.radio(
         "Retrieval Mode",
