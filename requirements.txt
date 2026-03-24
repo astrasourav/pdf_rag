@@ -15,6 +15,7 @@ chromadb                         # local vector database
 # ─── PDF Processing ───────────────────────────────────────────────────────────
 pypdf                            # basic PDF loader (already have)
 pymupdf                          # PyMuPDFLoader — faster, better metadata (add this)
+pdfplumber
 
 # ─── Hybrid Search (BM25 + Semantic) ──────────────────────────────────────────
 rank-bm25                        # BM25 keyword search for hybrid retrieval
