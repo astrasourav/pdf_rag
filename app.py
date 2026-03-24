@@ -512,10 +512,10 @@ with tab1:
                 </div>""", unsafe_allow_html=True)
             else:
                 sources_html = ""
-                if "sources" in msg and msg["sources"]:
-                    src = msg["sources"][0]   # ← only take the first source
-                    sources_html += f'<div class="source-card"><strong>📄 {src["file"]} · p.{src["page"]}</strong>{src["snippet"]}</div>'
-                    
+                if "sources" in msg:
+                    for src in msg["sources"]:
+                        sources_html += f'<div class="source-card"><strong>📄 {src["file"]} · p.{src["page"]}</strong>{src["snippet"]}</div>'
+ 
                 st.markdown(f"""
                 <div class="bubble-wrap ai">
                   <div class="avatar ai">AI</div>
@@ -525,7 +525,6 @@ with tab1:
                   </div>
                 </div>""", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-
     # Input row
     col_input, col_btn = st.columns([5, 1])
     with col_input:
