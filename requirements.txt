@@ -1,0 +1,37 @@
+# ─── Core Framework ───────────────────────────────────────────────────────────
+streamlit                        # UI
+langchain                        # RAG orchestration
+langchain-community              # loaders, retrievers, vectorstores
+langchain-core                   # base abstractions
+langchain-groq                   # Groq LLM integration
+sentence-transformers            # local embeddings (free, no API key needed)
+
+# ─── LLM & Embeddings ─────────────────────────────────────────────────────────
+groq                             # Groq API client
+
+# ─── Vector Store ─────────────────────────────────────────────────────────────
+chromadb                         # local vector database
+
+# ─── PDF Processing ───────────────────────────────────────────────────────────
+pypdf                            # basic PDF loader (already have)
+pymupdf                          # PyMuPDFLoader — faster, better metadata (add this)
+
+# ─── Hybrid Search (BM25 + Semantic) ──────────────────────────────────────────
+rank-bm25                        # BM25 keyword search for hybrid retrieval
+# langchain-retrievers             # EnsembleRetriever for combining BM25 + semantic
+
+# ─── RAGAS Evaluation ─────────────────────────────────────────────────────────
+ragas                            # pipeline evaluation (faithfulness, relevancy, etc.)
+datasets                         # required by ragas for eval datasets
+
+# ─── Tokenization & Text Utilities ────────────────────────────────────────────
+tiktoken                         # token counting (already have)
+python-dotenv                    # load .env file for API keys (already have)
+
+# ─── Optional but Recommended ─────────────────────────────────────────────────
+tqdm                             # progress bars during ingestion
+pandas                           # RAGAS results as dataframe
+numpy                            # general numerical ops
+loguru                           # For Logging
+ipython                          # For debuging
+langchain-huggingface            # For Embeddings
