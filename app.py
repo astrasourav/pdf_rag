@@ -335,11 +335,6 @@ with tab1:
     if st.session_state.messages:
         if st.button("🗑 Clear conversation"):
             st.session_state.messages = []
-            st.session_state.ingested = False
-            st.session_state.chunks   = []
-            st.session_state.chain    = None
-            reset_vectorstore()
-            clear_upload_dir()
             st.rerun()
 
 
