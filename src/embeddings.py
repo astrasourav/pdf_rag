@@ -1,0 +1,256 @@
+"""
+embeddings.py
+-------------
+Handles embedding generation and vector store management using
+sentence-transformers (free, local) and ChromaDB.
+
+Functions:
+    - get_embedding_model()   : loads the sentence-transformer model
+    - get_vectorstore()       : creates or loads a ChromaDB collection
+    - add_chunks_to_vectorstore() : embeds chunks and stores in ChromaDB
+    - load_vectorstore()      : loads an existing ChromaDB collection from disk
+
+Usage in other modules:
+    from embeddings import add_chunks_to_vectorstore, load_vectorstore
+
+    # After ingestion:
+    vectorstore = add_chunks_to_vectorstore(chunks)
+
+    # Later (e.g. in retriever.py):
+    vectorstore = load_vectorstore()
+"""
+
+import os
+from typing import List, Optional
+
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.documents import Document
+from loguru import logger
+
+
+# ─── Config ───────────────────────────────────────────────────────────────────
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"  # fast + free
+CHROMA_PERSIST_DIR   = "chroma_db"        # folder where ChromaDB saves to disk
+COLLECTION_NAME      = "multi_pdf_rag"    # ChromaDB collection name
+
+
+# ─── Step 1: Load Embedding Model ─────────────────────────────────────────────
+def get_embedding_model(model_name: str = EMBEDDING_MODEL_NAME) -> HuggingFaceEmbeddings:
+    """
+    Load a HuggingFace sentence-transformer embedding model.
+    The model is downloaded once and cached locally by HuggingFace.
+
+    Args:
+        model_name: HuggingFace model ID. Defaults to all-MiniLM-L6-v2.
+                    Other good free options:
+                      - "BAAI/bge-small-en-v1.5"   (better quality, slightly slower)
+                      - "BAAI/bge-base-en-v1.5"    (even better, larger)
+
+    Returns:
+        HuggingFaceEmbeddings object ready to use with LangChain.
+    """
+    logger.info(f"Loading embedding model: {model_name}")
+
+    embeddings = HuggingFaceEmbeddings(
+        model_name=model_name,
+        model_kwargs={"device": "cpu"},   # change to "cuda" if you have a GPU
+        encode_kwargs={"normalize_embeddings": True},  # cosine similarity ready
+    )
+
+    logger.info("Embedding model loaded successfully.")
+    return embeddings
+
+
+# ─── Step 2: Create / Load Vector Store ───────────────────────────────────────
+def get_vectorstore(
+    embedding_model: Optional[HuggingFaceEmbeddings] = None,
+    persist_dir: str = CHROMA_PERSIST_DIR,
+    collection_name: str = COLLECTION_NAME,
+) -> Chroma:
+    """
+    Create a new ChromaDB vectorstore or load one that already exists on disk.
+    ChromaDB automatically persists to disk at persist_dir.
+
+    Args:
+        embedding_model:  HuggingFaceEmbeddings instance. Loaded fresh if None.
+        persist_dir:      Folder path for ChromaDB storage.
+        collection_name:  Name of the ChromaDB collection.
+
+    Returns:
+        Chroma vectorstore instance.
+    """
+    if embedding_model is None:
+        embedding_model = get_embedding_model()
+
+    vectorstore = Chroma(
+        collection_name=collection_name,
+        embedding_function=embedding_model,
+        persist_directory=persist_dir,
+    )
+
+    return vectorstore
+
+
+# ─── Step 3: Embed Chunks and Store ───────────────────────────────────────────
+def add_chunks_to_vectorstore(
+    chunks: List[Document],
+    embedding_model: Optional[HuggingFaceEmbeddings] = None,
+    persist_dir: str = CHROMA_PERSIST_DIR,
+    collection_name: str = COLLECTION_NAME,
+    batch_size: int = 100,
+) -> Chroma:
+    """
+    Embed document chunks and store them in ChromaDB.
+    Chunks are processed in batches to avoid memory issues with large PDFs.
+
+    Args:
+        chunks:          List of Document chunks from ingestion.py.
+        embedding_model: HuggingFaceEmbeddings instance. Loaded fresh if None.
+        persist_dir:     Folder path for ChromaDB storage.
+        collection_name: Name of the ChromaDB collection.
+        batch_size:      Number of chunks to embed at once (default 100).
+
+    Returns:
+        Populated Chroma vectorstore.
+
+    Example:
+        from ingestion import load_and_chunk_pdfs
+        from embeddings import add_chunks_to_vectorstore
+
+        chunks      = load_and_chunk_pdfs(["data/paper.pdf"])
+        vectorstore = add_chunks_to_vectorstore(chunks)
+    """
+    if embedding_model is None:
+        embedding_model = get_embedding_model()
+
+    logger.info(f"Embedding {len(chunks)} chunks in batches of {batch_size}...")
+
+    # Process in batches
+    vectorstore = None
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i : i + batch_size]
+
+        if vectorstore is None:
+            # First batch — create the collection
+            vectorstore = Chroma.from_documents(
+                documents=batch,
+                embedding=embedding_model,
+                collection_name=collection_name,
+                persist_directory=persist_dir,
+            )
+        else:
+            # Subsequent batches — add to existing collection
+            vectorstore.add_documents(batch)
+
+        logger.info (f"[INFO] Embedded batch {i // batch_size + 1} → {min(i + batch_size, len(chunks))}/{len(chunks)} chunks")
+
+    logger.info(f"All chunks stored in ChromaDB at '{persist_dir}'")
+    return vectorstore
+
+
+# ─── Step 4: Load Existing Vector Store ───────────────────────────────────────
+def load_vectorstore(
+    persist_dir: str = CHROMA_PERSIST_DIR,
+    collection_name: str = COLLECTION_NAME,
+    embedding_model: Optional[HuggingFaceEmbeddings] = None,
+) -> Chroma:
+    """
+    Load an already-persisted ChromaDB vectorstore from disk.
+    Use this in retriever.py instead of re-embedding every time.
+
+    Args:
+        persist_dir:      Folder where ChromaDB was saved.
+        collection_name:  Name of the ChromaDB collection.
+        embedding_model:  HuggingFaceEmbeddings instance. Loaded fresh if None.
+
+    Returns:
+        Chroma vectorstore loaded from disk.
+
+    Raises:
+        FileNotFoundError: If persist_dir does not exist.
+
+    Example:
+        vectorstore = load_vectorstore()
+        results = vectorstore.similarity_search("What is RAG?", k=4)
+    """
+    if not os.path.exists(persist_dir):
+        raise FileNotFoundError(
+            f"[ERROR] ChromaDB not found at '{persist_dir}'. "
+            f"Run add_chunks_to_vectorstore() first."
+        )
+
+    if embedding_model is None:
+        embedding_model = get_embedding_model()
+
+    logger.info(f"Loading ChromaDB from '{persist_dir}'...")
+
+    vectorstore = Chroma(
+        collection_name=collection_name,
+        embedding_function=embedding_model,
+        persist_directory=persist_dir,
+    )
+
+    count = vectorstore._collection.count()
+    logger.info(f"Loaded vectorstore with {count} stored chunks.")
+    return vectorstore
+
+
+# ─── Helper: Reset Vector Store ───────────────────────────────────────────────
+def reset_vectorstore(persist_dir: str = CHROMA_PERSIST_DIR) -> None:
+    """
+    Delete the ChromaDB folder and all stored embeddings.
+    Useful when re-ingesting new PDFs from scratch.
+
+    Args:
+        persist_dir: Folder to delete.
+
+    Example:
+        reset_vectorstore()   # wipe and start fresh
+    """
+    import shutil
+    if os.path.exists(persist_dir):
+        shutil.rmtree(persist_dir)
+        logger.info(f"Vectorstore reset. Deleted: {persist_dir}")
+    else:
+        logger.info(f"Nothing to reset — '{persist_dir}' does not exist.")
+
+
+# ─── Quick Test ───────────────────────────────────────────────────────────────
+# if __name__ == "__main__":
+#     from ingestion import load_and_chunk_pdfs
+#     import sys
+
+#     paths = sys.argv[1:] if len(sys.argv) > 1 else []
+
+#     if not paths:
+#         print("Usage: python embeddings.py path/to/file.pdf")
+#         print("\nRunning quick embedding model test instead...\n")
+
+#         # Test that the embedding model loads and works
+#         model = get_embedding_model()
+#         test_texts = [
+#             "RAG stands for Retrieval Augmented Generation.",
+#             "ChromaDB is a vector database.",
+#             "LangChain helps build LLM applications.",
+#         ]
+#         vectors = model.embed_documents(test_texts)
+#         print(f"Model output  : {len(vectors)} vectors")
+#         print(f"Vector dims   : {len(vectors[0])} dimensions")
+#         print(f"Sample vector : {vectors[0][:6]}...")
+#     else:
+#         # Full pipeline test with a real PDF
+#         print("=== Full Pipeline Test ===\n")
+#         chunks      = load_and_chunk_pdfs(paths)
+#         vectorstore = add_chunks_to_vectorstore(chunks)
+
+#         # Quick similarity search to verify everything works
+#         query   = "What is the main topic of this document?"
+#         results = vectorstore.similarity_search(query, k=3)
+
+#         print(f"\n=== Similarity Search: '{query}' ===")
+#         for i, doc in enumerate(results, 1):
+#             print(f"\n[Result {i}]")
+#             print(f"  Source  : {doc.metadata.get('source', 'unknown')}")
+#             print(f"  Page    : {doc.metadata.get('page', '?')}")
+#             print(f"  Content : {doc.page_content[:150]}...")
