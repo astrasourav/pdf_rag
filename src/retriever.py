@@ -262,45 +262,6 @@ def test_retriever(retriever, query: str) -> None:
         print(f"    {preview}...")
 
     print(f"\nTotal chunks retrieved: {len(docs)}")
-
-
-# ─── Quick Test ───────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    import sys
-    from ingestion import load_and_chunk_pdfs
-    from embeddings import add_chunks_to_vectorstore, load_vectorstore
-    import os
-
-    paths = sys.argv[1:] if len(sys.argv) > 1 else []
-
-    if not paths:
-        print("Usage: python retriever.py path/to/file.pdf")
-        print("\nRunning with existing ChromaDB if available...\n")
-
-        if not os.path.exists("chroma_db"):
-            print("[ERROR] No ChromaDB found. Run embeddings.py first with a PDF.")
-            sys.exit(1)
-
-        vectorstore = load_vectorstore()
-        # For hybrid we need chunks — load a dummy set for testing
-        chunks = []
-    else:
-        chunks      = load_and_chunk_pdfs(paths)
-        vectorstore = add_chunks_to_vectorstore(chunks)
-
-    query = "What are the main topics covered in this document?"
-
-    print("\n=== Testing all 3 retrieval modes ===\n")
-
-    print("[ MODE: semantic ]")
-    r1 = get_retriever(vectorstore, mode="semantic", k=3)
-    test_retriever(r1, query)
-
-    if chunks:
-        print("\n\n[ MODE: hybrid ]")
-        r2 = get_retriever(vectorstore, chunks=chunks, mode="hybrid", k=3)
-        test_retriever(r2, query)
-
     print("\n\n[ MODE: mmr ]")
     r3 = get_retriever(vectorstore, mode="mmr", k=3)
     test_retriever(r3, query)
