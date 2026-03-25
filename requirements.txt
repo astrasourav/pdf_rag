@@ -5,6 +5,7 @@ langchain-community              # loaders, retrievers, vectorstores
 langchain-core                   # base abstractions
 langchain-groq                   # Groq LLM integration
 sentence-transformers            # local embeddings (free, no API key needed)
+langchain-huggingface            # For Embeddings
 
 # ─── LLM & Embeddings ─────────────────────────────────────────────────────────
 groq                             # Groq API client
@@ -35,4 +36,4 @@ pandas                           # RAGAS results as dataframe
 numpy                            # general numerical ops
 loguru                           # For Logging
 ipython                          # For debuging
-langchain-huggingface            # For Embeddings
+
