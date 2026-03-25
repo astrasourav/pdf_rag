@@ -234,34 +234,4 @@ def get_retriever(
         )
 
 
-# ─── Helper: test retrieval manually ─────────────────────────────────────────
-def test_retriever(retriever, query: str) -> None:
-    """
-    Quick helper to test any retriever with a query and print results.
-    Use during development to verify retrieval quality.
 
-    Args:
-        retriever: Any LangChain retriever returned by get_retriever().
-        query:     Test question string.
-
-    Example:
-        retriever = get_retriever(vectorstore, chunks, mode="hybrid")
-        test_retriever(retriever, "What is the main conclusion?")
-    """
-    print(f"\n{'─'*55}")
-    print(f"Query : {query}")
-    print(f"{'─'*55}")
-
-    docs = retriever.invoke(query)
-
-    for i, doc in enumerate(docs, 1):
-        source  = doc.metadata.get("source", "unknown")
-        page    = doc.metadata.get("page", "?")
-        preview = doc.page_content[:200].replace("\n", " ")
-        print(f"\n[{i}] {source}  ·  page {page}")
-        print(f"    {preview}...")
-
-    print(f"\nTotal chunks retrieved: {len(docs)}")
-    print("\n\n[ MODE: mmr ]")
-    r3 = get_retriever(vectorstore, mode="mmr", k=3)
-    test_retriever(r3, query)
