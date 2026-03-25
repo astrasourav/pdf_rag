@@ -14,7 +14,7 @@ A production-grade Retrieval Augmented Generation (RAG) application that lets yo
 
 > Upload PDFs → Ingest & Index → Ask anything → Get cited, grounded answers
 
-**Live Demo:** [your-app.streamlit.app](https://your-app.streamlit.app) *(deploy and update this link)*
+**Live Demo:** [app](https://souravpdf1.streamlit.app/)
 
 ---
 
