@@ -20,7 +20,7 @@ pdfplumber
 
 # ─── Hybrid Search (BM25 + Semantic) ──────────────────────────────────────────
 rank-bm25                        # BM25 keyword search for hybrid retrieval
-# langchain-retrievers             # EnsembleRetriever for combining BM25 + semantic
+langchain-retrievers             # EnsembleRetriever for combining BM25 + semantic
 
 # ─── RAGAS Evaluation ─────────────────────────────────────────────────────────
 ragas                            # pipeline evaluation (faithfulness, relevancy, etc.)
