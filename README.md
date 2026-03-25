@@ -193,7 +193,7 @@ docmind/
 ### Step 1 — Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/docmind.git
+git clone https://github.com/astrasourav/pdf_rag
 cd docmind
 ```
 
