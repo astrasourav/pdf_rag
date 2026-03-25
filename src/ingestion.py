@@ -17,6 +17,7 @@ Usage:
 import os
 from typing import List
 
+import pdfplumber
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -30,41 +31,172 @@ DEFAULT_SEPARATORS    = ["\n\n", "\n", ".", " "]
 
 
 # ─── Step 1: Load PDFs ────────────────────────────────────────────────────────
+# def load_pdfs(pdf_paths: List[str]) -> List[Document]:
+#     """
+#     Load one or more PDFs and return a flat list of LangChain Documents.
+#     Each document page gets metadata: source filename + page number.
+
+#     Args:
+#         pdf_paths: List of file paths to PDF files.
+
+#     Returns:
+#         List of Document objects (one per page across all PDFs).
+#     """
+#     all_docs: List[Document] = []
+
+#     for path in pdf_paths:
+#         if not os.path.exists(path):
+#             print(f"[WARNING] File not found, skipping: {path}")
+#             logger.error(f"File not found, skipping: {path}")
+#             continue
+
+#         loader = PyMuPDFLoader(path)
+#         docs   = loader.load()  # returns one Document per page
+
+#         # Enrich metadata with a clean filename for citations in the UI
+#         filename = os.path.basename(path)
+#         for doc in docs:
+#             doc.metadata["source"]   = filename
+#             doc.metadata["filepath"] = path
+#             # PyMuPDFLoader already adds 'page' (0-indexed), make it 1-indexed
+#             doc.metadata["page"] = doc.metadata.get("page", 0) + 1
+
+#         all_docs.extend(docs)
+#         logger.info(f"Loaded '{filename}' → {len(docs)} pages")
+
+#     logger.info(f"Total pages loaded: {len(all_docs)}")
+#     return all_docs
+
 def load_pdfs(pdf_paths: List[str]) -> List[Document]:
-    """
-    Load one or more PDFs and return a flat list of LangChain Documents.
-    Each document page gets metadata: source filename + page number.
-
-    Args:
-        pdf_paths: List of file paths to PDF files.
-
-    Returns:
-        List of Document objects (one per page across all PDFs).
-    """
-    all_docs: List[Document] = []
+    all_docs = []
 
     for path in pdf_paths:
         if not os.path.exists(path):
             print(f"[WARNING] File not found, skipping: {path}")
-            logger.error(f"File not found, skipping: {path}")
             continue
 
-        loader = PyMuPDFLoader(path)
-        docs   = loader.load()  # returns one Document per page
-
-        # Enrich metadata with a clean filename for citations in the UI
         filename = os.path.basename(path)
+
+        # Try pdfplumber first
+        print(f"[INFO] Attempting pdfplumber for {filename}...")
+        docs = _load_with_pdfplumber(path, filename)
+
+        # Fallback to PyMuPDF
+        if not docs:
+            print(f"[INFO] pdfplumber returned 0 docs — falling back to PyMuPDF for {filename}...")
+            docs = _load_with_pymupdf(path, filename)
+
+        # Final fallback — OCR for scanned/image-based PDFs  ← was missing!
+        if not docs:
+            print(f"[INFO] PyMuPDF also empty — trying OCR for {filename}...")
+            docs = _load_with_ocr_fallback(path, filename)
+
+        if not docs:
+            print(f"[ERROR] All extractors failed for {filename}. PDF may be corrupted.")
+        else:
+            all_docs.extend(docs)
+            print(f"[INFO] Loaded '{filename}' → {len(docs)} pages")
+
+    print(f"[INFO] Total pages gathered: {len(all_docs)}")
+    return all_docs
+
+
+def _load_with_pdfplumber(path: str, filename: str) -> List[Document]:
+    """
+    Load PDF using pdfplumber.
+    Handles:
+        - Multi-column layouts (CVs)
+        - Tables → converts to readable markdown-style text
+        - Mixed text + table pages
+    """
+    docs = []
+
+    try:
+        with pdfplumber.open(path) as pdf:
+            for page_num, page in enumerate(pdf.pages, start=1):
+                page_text = ""
+
+                # ── Extract tables first ──────────────────────────────────
+                tables = page.extract_tables()
+                table_texts = []
+
+                for table in tables:
+                    if not table:
+                        continue
+                    # Convert table rows to readable pipe-separated text
+                    formatted_rows = []
+                    for row in table:
+                        clean_row = [str(cell).strip() if cell else "" for cell in row]
+                        formatted_rows.append(" | ".join(clean_row))
+                    table_texts.append("\n".join(formatted_rows))
+
+                # ── Extract plain text (excluding table areas) ────────────
+                # filter_table_areas removes table bounding boxes from text extraction
+                # so we don't get duplicate content
+                if tables:
+                    table_areas = [page.find_tables()[i].bbox for i in range(len(tables))]
+                    filtered = page
+                    for bbox in table_areas:
+                        try:
+                            filtered = filtered.filter(
+                                lambda obj: not _in_bbox(obj, bbox)
+                            )
+                        except Exception:
+                            pass
+                    plain_text = filtered.extract_text() or ""
+                else:
+                    plain_text = page.extract_text() or ""
+
+                # ── Combine plain text + tables ───────────────────────────
+                if table_texts:
+                    page_text = plain_text + "\n\n[TABLE]\n" + "\n\n[TABLE]\n".join(table_texts)
+                else:
+                    page_text = plain_text
+
+                if page_text.strip():
+                    docs.append(Document(
+                        page_content=page_text.strip(),
+                        metadata={
+                            "source":   filename,
+                            "filepath": path,
+                            "page":     page_num,
+                        }
+                    ))
+
+    except Exception as e:
+        print(f"[WARN] pdfplumber failed for {filename}: {e}")
+        return []
+
+    return docs
+
+
+def _load_with_pymupdf(path: str, filename: str) -> List[Document]:
+    """Fallback loader using PyMuPDF for simple text PDFs."""
+    try:
+        loader = PyMuPDFLoader(path)
+        docs   = loader.load()
         for doc in docs:
             doc.metadata["source"]   = filename
             doc.metadata["filepath"] = path
-            # PyMuPDFLoader already adds 'page' (0-indexed), make it 1-indexed
-            doc.metadata["page"] = doc.metadata.get("page", 0) + 1
+            doc.metadata["page"]     = doc.metadata.get("page", 0) + 1
+        return docs
+    except Exception as e:
+        print(f"[WARN] PyMuPDF also failed for {filename}: {e}")
+        return []
 
-        all_docs.extend(docs)
-        logger.info(f"Loaded '{filename}' → {len(docs)} pages")
 
-    logger.info(f"Total pages loaded: {len(all_docs)}")
-    return all_docs
+def _in_bbox(obj, bbox) -> bool:
+    """Check if a PDF object falls within a bounding box."""
+    try:
+        x0, y0, x1, y1 = bbox
+        ox = obj.get("x0", 0)
+        oy = obj.get("top", 0)
+        # Handle cases where obj is None or missing keys
+        if ox is None: ox = 0
+        if oy is None: oy = 0
+        return x0 <= ox <= x1 and y0 <= oy <= y1
+    except Exception:
+        return False
 
 
 # ─── Step 2: Split into Chunks ───────────────────────────────────────────────
