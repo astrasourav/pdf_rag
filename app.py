@@ -4,7 +4,7 @@ import html as html_lib
 
 from src.ingestion import load_and_chunk_pdfs
 from src.utils import save_uploaded_files, clear_upload_dir
-from src.embeddings import add_chunks_to_vectorstore, reset_vectorstore
+from src.embeddings import add_chunks_to_vectorstore
 from src.retriever import get_retriever
 from src.chain import build_conversational_chain, ask
 from src.evaluate import evaluate_pipeline
