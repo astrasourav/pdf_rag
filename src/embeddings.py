@@ -30,8 +30,8 @@ from loguru import logger
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"  # fast + free
-CHROMA_PERSIST_DIR   = "chroma_db"        # folder where ChromaDB saves to disk
+# EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"  # fast + free
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"   # better quality, slightly slower
 COLLECTION_NAME      = "multi_pdf_rag"    # ChromaDB collection name
 
 
@@ -54,7 +54,7 @@ def get_embedding_model(model_name: str = EMBEDDING_MODEL_NAME) -> HuggingFaceEm
 
     embeddings = HuggingFaceEmbeddings(
         model_name=model_name,
-        model_kwargs={"device": "cpu"},   # change to "cuda" if you have a GPU
+        model_kwargs={"device": "cuda"},   # change to "cuda" if you have a GPU/cpu if you don't have a gpu
         encode_kwargs={"normalize_embeddings": True},  # cosine similarity ready
     )
 
@@ -65,7 +65,6 @@ def get_embedding_model(model_name: str = EMBEDDING_MODEL_NAME) -> HuggingFaceEm
 # ─── Step 2: Create / Load Vector Store ───────────────────────────────────────
 def get_vectorstore(
     embedding_model: Optional[HuggingFaceEmbeddings] = None,
-    persist_dir: str = CHROMA_PERSIST_DIR,
     collection_name: str = COLLECTION_NAME,
 ) -> Chroma:
     """
@@ -86,7 +85,6 @@ def get_vectorstore(
     vectorstore = Chroma(
         collection_name=collection_name,
         embedding_function=embedding_model,
-        persist_directory=persist_dir,
     )
 
     return vectorstore
@@ -96,7 +94,6 @@ def get_vectorstore(
 def add_chunks_to_vectorstore(
     chunks: List[Document],
     embedding_model: Optional[HuggingFaceEmbeddings] = None,
-    persist_dir: str = CHROMA_PERSIST_DIR,
     collection_name: str = COLLECTION_NAME,
     batch_size: int = 100,
 ) -> Chroma:
@@ -137,7 +134,6 @@ def add_chunks_to_vectorstore(
                 documents=batch,
                 embedding=embedding_model,
                 collection_name=collection_name,
-                persist_directory=persist_dir,
             )
         else:
             # Subsequent batches — add to existing collection
@@ -151,7 +147,6 @@ def add_chunks_to_vectorstore(
 
 # ─── Step 4: Load Existing Vector Store ───────────────────────────────────────
 def load_vectorstore(
-    persist_dir: str = CHROMA_PERSIST_DIR,
     collection_name: str = COLLECTION_NAME,
     embedding_model: Optional[HuggingFaceEmbeddings] = None,
 ) -> Chroma:
@@ -188,30 +183,10 @@ def load_vectorstore(
     vectorstore = Chroma(
         collection_name=collection_name,
         embedding_function=embedding_model,
-        persist_directory=persist_dir,
     )
 
     count = vectorstore._collection.count()
     logger.info(f"Loaded vectorstore with {count} stored chunks.")
     return vectorstore
 
-
-# ─── Helper: Reset Vector Store ───────────────────────────────────────────────
-def reset_vectorstore(persist_dir: str = CHROMA_PERSIST_DIR) -> None:
-    """
-    Delete the ChromaDB folder and all stored embeddings.
-    Useful when re-ingesting new PDFs from scratch.
-
-    Args:
-        persist_dir: Folder to delete.
-
-    Example:
-        reset_vectorstore()   # wipe and start fresh
-    """
-    import shutil
-    if os.path.exists(persist_dir):
-        shutil.rmtree(persist_dir)
-        logger.info(f"Vectorstore reset. Deleted: {persist_dir}")
-    else:
-        logger.info(f"Nothing to reset — '{persist_dir}' does not exist.")
 
