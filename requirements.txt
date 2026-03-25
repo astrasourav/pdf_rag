@@ -13,7 +13,7 @@ groq                             # Groq API client
 chromadb                         # local vector database
 
 # ─── PDF Processing ───────────────────────────────────────────────────────────
-pypdf                            # basic PDF loader (already have)
+pypdf                            # basic PDF loader 
 pymupdf                          # PyMuPDFLoader — faster, better metadata (add this)
 pdfplumber
 
