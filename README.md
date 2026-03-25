@@ -194,7 +194,7 @@ docmind/
 
 ```bash
 git clone https://github.com/astrasourav/pdf_rag
-cd docmind
+cd pdf_rag
 ```
 
 ### Step 2 — Create a virtual environment
