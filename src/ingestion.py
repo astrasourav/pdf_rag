@@ -27,46 +27,17 @@ from loguru import logger
 # ─── Constants (easy to override) ────────────────────────────────────────────
 DEFAULT_CHUNK_SIZE    = 1000
 DEFAULT_CHUNK_OVERLAP = 200
-DEFAULT_SEPARATORS    = ["\n\n", "\n", ".", " "]
+# DEFAULT_SEPARATORS    = ["\n\n", "\n", ".", " "]
+DEFAULT_SEPARATORS = [
+    "\n\n",           # paragraph breaks
+    "\n",             # line breaks
+    "[TABLE]",        # our table marker — keep tables as their own chunks
+    ".",
+    " ",
+]
 
 
 # ─── Step 1: Load PDFs ────────────────────────────────────────────────────────
-# def load_pdfs(pdf_paths: List[str]) -> List[Document]:
-#     """
-#     Load one or more PDFs and return a flat list of LangChain Documents.
-#     Each document page gets metadata: source filename + page number.
-
-#     Args:
-#         pdf_paths: List of file paths to PDF files.
-
-#     Returns:
-#         List of Document objects (one per page across all PDFs).
-#     """
-#     all_docs: List[Document] = []
-
-#     for path in pdf_paths:
-#         if not os.path.exists(path):
-#             print(f"[WARNING] File not found, skipping: {path}")
-#             logger.error(f"File not found, skipping: {path}")
-#             continue
-
-#         loader = PyMuPDFLoader(path)
-#         docs   = loader.load()  # returns one Document per page
-
-#         # Enrich metadata with a clean filename for citations in the UI
-#         filename = os.path.basename(path)
-#         for doc in docs:
-#             doc.metadata["source"]   = filename
-#             doc.metadata["filepath"] = path
-#             # PyMuPDFLoader already adds 'page' (0-indexed), make it 1-indexed
-#             doc.metadata["page"] = doc.metadata.get("page", 0) + 1
-
-#         all_docs.extend(docs)
-#         logger.info(f"Loaded '{filename}' → {len(docs)} pages")
-
-#     logger.info(f"Total pages loaded: {len(all_docs)}")
-#     return all_docs
-
 def load_pdfs(pdf_paths: List[str]) -> List[Document]:
     all_docs = []
 
