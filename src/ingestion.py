@@ -27,7 +27,6 @@ from loguru import logger
 # ─── Constants (easy to override) ────────────────────────────────────────────
 DEFAULT_CHUNK_SIZE    = 1000
 DEFAULT_CHUNK_OVERLAP = 200
-# DEFAULT_SEPARATORS    = ["\n\n", "\n", ".", " "]
 DEFAULT_SEPARATORS = [
     "\n\n",           # paragraph breaks
     "\n",             # line breaks
