@@ -335,6 +335,14 @@ with tab1:
     if st.session_state.messages:
         if st.button("🗑 Clear conversation"):
             st.session_state.messages = []
+            st.session_state.ingested    = False        # ingestion wiped
+            st.session_state.chunks      = []           # chunks wiped
+            st.session_state.chain       = None         # chain wiped
+            st.session_state.pdfs_loaded = []           # PDF is cleared
+            st.session_state.vectorstore = None         # vectorstore wiped
+
+            # A quick check to see if after clearing the session state, the pdf_loaded is empty
+            logger.info(f"PDF file = {st.session_state.pdfs_loaded}")
             st.rerun()
 
 
