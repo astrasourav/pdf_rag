@@ -453,30 +453,3 @@ def evaluate_pipeline(
     scores        = run_evaluation(ragas_dataset, llm)
 
     return scores
-
-
-# ─── Quick Test ───────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    import sys
-    from ingestion import load_and_chunk_pdfs
-    from embeddings import add_chunks_to_vectorstore
-    from retriever import get_retriever
-    from chain import build_conversational_chain
-
-    paths = sys.argv[1:] if len(sys.argv) > 1 else []
-    if not paths:
-        print("Usage: python evaluate.py path/to/file.pdf")
-        sys.exit(1)
-
-    print("=== Full RAG + RAGAS Evaluation ===\n")
-    chunks      = load_and_chunk_pdfs(paths)
-    vectorstore = add_chunks_to_vectorstore(chunks)
-    retriever   = get_retriever(vectorstore, chunks=chunks, mode="hybrid", k=4)
-    chain       = build_conversational_chain(retriever)
-
-    scores = evaluate_pipeline(chain=chain, chunks=chunks, num_synthetic=3)
-
-    print("\n=== RAGAS Scores ===")
-    for metric, score in scores.items():
-        bar = "█" * int(score * 20)
-        print(f"  {metric:<22} {score:.4f}  {bar}")
