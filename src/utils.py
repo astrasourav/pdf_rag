@@ -105,7 +105,3 @@ def get_pdf_paths() -> List[str]:
     ]
 
 
-# ─── Quick test ──────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    print("Upload dir  :", UPLOAD_DIR)
-    print("PDFs on disk:", get_pdf_paths())
