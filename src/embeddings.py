@@ -27,7 +27,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from loguru import logger
-
+import torch
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 # EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"  # fast + free
@@ -52,11 +52,21 @@ def get_embedding_model(model_name: str = EMBEDDING_MODEL_NAME) -> HuggingFaceEm
     """
     logger.info(f"Loading embedding model: {model_name}")
 
+    # Auto-detect — uses GPU if available, falls back to CPU silently
+    device = "cuda" if torch.cuda.is_available() else "cpu" 
+    logger.info(f"Using device: {device}")
+
+    # Batch sizes according to the device
+    if device == "cuda":
+        batch_size = 64
+    else:
+        batch_size = 32
+    
     embeddings = HuggingFaceEmbeddings(
         model_name=model_name,
-        model_kwargs={"device": "cuda"},   # change to "cuda" if you have a GPU
+        model_kwargs={"device": device},   
         encode_kwargs={"normalize_embeddings": True,
-                      "batch_size": 64
+                      "batch_size": batch_size
                       },  
     )
 
