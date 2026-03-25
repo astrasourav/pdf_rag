@@ -286,35 +286,3 @@ def ask(
         "question": response.get("input", question),
     }
 
-
-# ─── Quick Test ───────────────────────────────────────────────────────────────
-# if __name__ == "__main__":
-#     import sys
-#     from ingestion import load_and_chunk_pdfs
-#     from embeddings import add_chunks_to_vectorstore
-#     from retriever import get_retriever
-
-#     paths = sys.argv[1:] if len(sys.argv) > 1 else []
-
-#     if not paths:
-#         print("Usage: python chain.py path/to/file.pdf")
-#         sys.exit(1)
-
-#     print("=== Building full RAG pipeline ===\n")
-#     chunks      = load_and_chunk_pdfs(paths)
-#     vectorstore = add_chunks_to_vectorstore(chunks)
-#     retriever   = get_retriever(vectorstore, chunks=chunks, mode="hybrid", k=4)
-#     chain       = build_conversational_chain(retriever)
-
-#     # Turn 1
-#     print("\n--- Turn 1 ---")
-#     r1 = ask(chain, "What is this document about?", chat_history=[])
-#     print(f"Answer  : {r1['answer']}")
-#     print(f"Sources : {[f\"{s['file']} p.{s['page']}\" for s in r1['sources']]}")
-
-#     # Turn 2 — follow-up that tests contextualization
-#     print("\n--- Turn 2 (follow-up) ---")
-#     history = [(r1["question"], r1["answer"])]
-#     r2      = ask(chain, "Can you elaborate on that?", chat_history=history)
-#     print(f"Answer  : {r2['answer']}")
-#     print(f"Sources : {[f\"{s['file']} p.{s['page']}\" for s in r2['sources']]}")
