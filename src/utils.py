@@ -23,7 +23,7 @@ import streamlit as st
 
 
 # ─── Config ──────────────────────────────────────────────────────────────────
-UPLOAD_DIR = "uploaded_pdfs"   # local folder where PDFs are saved
+UPLOAD_DIR = "/tmp/uploaded_pdfs"   # local folder where PDFs are saved
 
 
 # ─── save_uploaded_files ─────────────────────────────────────────────────────
