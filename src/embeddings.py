@@ -54,8 +54,10 @@ def get_embedding_model(model_name: str = EMBEDDING_MODEL_NAME) -> HuggingFaceEm
 
     embeddings = HuggingFaceEmbeddings(
         model_name=model_name,
-        model_kwargs={"device": "cuda"},   # change to "cuda" if you have a GPU/cpu if you don't have a gpu
-        encode_kwargs={"normalize_embeddings": True},  # cosine similarity ready
+        model_kwargs={"device": "cuda"},   # change to "cuda" if you have a GPU
+        encode_kwargs={"normalize_embeddings": True,
+                      "batch_size": 64
+                      },  
     )
 
     logger.info("Embedding model loaded successfully.")
@@ -141,7 +143,6 @@ def add_chunks_to_vectorstore(
 
         logger.info (f"[INFO] Embedded batch {i // batch_size + 1} → {min(i + batch_size, len(chunks))}/{len(chunks)} chunks")
 
-    logger.info(f"All chunks stored in ChromaDB at '{persist_dir}'")
     return vectorstore
 
 
@@ -169,16 +170,9 @@ def load_vectorstore(
         vectorstore = load_vectorstore()
         results = vectorstore.similarity_search("What is RAG?", k=4)
     """
-    if not os.path.exists(persist_dir):
-        raise FileNotFoundError(
-            f"[ERROR] ChromaDB not found at '{persist_dir}'. "
-            f"Run add_chunks_to_vectorstore() first."
-        )
-
     if embedding_model is None:
         embedding_model = get_embedding_model()
 
-    logger.info(f"Loading ChromaDB from '{persist_dir}'...")
 
     vectorstore = Chroma(
         collection_name=collection_name,
@@ -188,5 +182,7 @@ def load_vectorstore(
     count = vectorstore._collection.count()
     logger.info(f"Loaded vectorstore with {count} stored chunks.")
     return vectorstore
+
+
 
 
