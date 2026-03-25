@@ -34,8 +34,8 @@ load_dotenv()
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────
-DEFAULT_MODEL       = "llama-3.1-8b-instant"    # fast + free on Groq
-FALLBACK_MODEL      = "llama-3.3-70b-versatile"  # smarter, still free
+DEFAULT_MODEL       = "llama-3.3-70b-versatile"    # smarter, still free
+FALLBACK_MODEL      = "llama-3.1-8b-instant"       # fast + free on Groq
 DEFAULT_TEMPERATURE = 0                           # 0 = deterministic, best for RAG
 
 
